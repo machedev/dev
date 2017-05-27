@@ -67,7 +67,7 @@ public class Archiver {
 			        folderToArchive = chooser.getSelectedFile().toString();
 			    }
 			    else {
-			        	System.out.println("No Selection ");
+			        	System.out.println("No Selection made");
 			    }
 			}
 		});
