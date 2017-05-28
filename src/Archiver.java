@@ -5,6 +5,9 @@ import java.awt.event.ActionEvent;
 import javax.swing.JFrame;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.JProgressBar;
 
 import java.io.File; 
 import java.io.FileInputStream;
@@ -13,14 +16,17 @@ import java.io.FileOutputStream;
 
 import java.util.zip.ZipEntry; 
 import java.util.zip.ZipOutputStream;
-import javax.swing.JTextField;
 
 public class Archiver {
 
 	private JFrame frame;
+	private JTextField displayFolder;
+	static JProgressBar progressBar;
+	
 	JFileChooser chooser;
 	String folderToArchive;
-	private JTextField displayFolder;
+	static int fileCount = 0;
+	static int filesZipped = 0;
 
 	/**
 	 * Launch the application.
@@ -35,7 +41,7 @@ public class Archiver {
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
-			}
+			}		
 		});
 	}
 
@@ -66,6 +72,8 @@ public class Archiver {
 			    chooser.setAcceptAllFileFilterUsed(false);
 			    chooser.setApproveButtonText("Choose folder");
 			    if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+			        fileCount = 0;
+			        filesZipped = 0;
 			        folderToArchive = chooser.getSelectedFile().toString();
 			        long folderSize = folderSize(chooser.getSelectedFile());
 			        displayFolder.setText("Folder : " + folderToArchive + " Size on disk : " + humanReadableByteCount(folderSize, false));
@@ -83,7 +91,11 @@ public class Archiver {
 			public void actionPerformed(ActionEvent arg0) {
 				String nameOfArchive = folderToArchive.substring(folderToArchive.lastIndexOf('\\')+1, folderToArchive.length()) + ".zip";
 				FileOutputStream fos;
-				ZipOutputStream zos; 
+				ZipOutputStream zos;
+				
+				progressBar.setVisible(true);
+				progressBar.setMinimum(0);
+			    progressBar.setMaximum(fileCount);
 				
 				try {
 					fos = new FileOutputStream(System.getProperty("user.home") + "\\Desktop\\" + nameOfArchive);
@@ -112,6 +124,12 @@ public class Archiver {
 		displayFolder.setBounds(12, 106, 372, 22);
 		frame.getContentPane().add(displayFolder);
 		displayFolder.setColumns(10);
+		
+		progressBar = new JProgressBar();
+		progressBar.setBounds(12, 178, 372, 34);
+		progressBar.setStringPainted(true);
+		progressBar.setVisible(false);
+		frame.getContentPane().add(progressBar);
 	}
 	
 	public static void addDirToZipArchive(ZipOutputStream zos, File fileToZip, String parrentDirectoryName) throws Exception { 
@@ -129,6 +147,15 @@ public class Archiver {
                 addDirToZipArchive(zos, file, zipEntryName); 
             } 
         } else { 
+        	filesZipped += 1;
+    		//progressBar.setString("Files zipped " + filesZipped);
+    		
+    		SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    progressBar.setValue(filesZipped);
+            }
+    		});
+    		
             byte[] buffer = new byte[1024]; 
             FileInputStream fis = new FileInputStream(fileToZip); 
             zos.putNextEntry(new ZipEntry(zipEntryName)); 
@@ -138,14 +165,16 @@ public class Archiver {
             } 
             zos.closeEntry(); 
             fis.close(); 
-        } 
+        }
     }
 	
 	public static long folderSize(File directory) {
 	    long length = 0;
 	    for (File file : directory.listFiles()) {
-	        if (file.isFile())
+	        if (file.isFile()) {
 	            length += file.length();
+	        	fileCount += 1;
+	        }
 	        else
 	            length += folderSize(file);
 	    }
